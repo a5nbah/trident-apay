@@ -149,6 +149,26 @@ public class ApiWrapper {
         keyPair = new KeyPair(hexPrivateKey);
     }
 
+    public ApiWrapper(String grpcEndpoint, String grpcEndpointSolidity, String hexPrivateKey, String apiKey, int timeoutMs) {
+      channel = ManagedChannelBuilder.forTarget(grpcEndpoint).usePlaintext().build();
+      channelSolidity = ManagedChannelBuilder.forTarget(grpcEndpointSolidity).usePlaintext().build();
+
+      //attach api key
+      Metadata header = new Metadata();
+      Metadata.Key<String> key = Metadata.Key.of("TRON-PRO-API-KEY", Metadata.ASCII_STRING_MARSHALLER);
+      header.put(key, apiKey);
+
+      //create a client to interceptor to attach the custom metadata headers and timeout
+      blockingStub = WalletGrpc.newBlockingStub(channel)
+          .withInterceptors(MetadataUtils.newAttachHeadersInterceptor(header))
+          .withDeadlineAfter(timeoutMs, TimeUnit.MILLISECONDS);
+      blockingStubSolidity = WalletSolidityGrpc.newBlockingStub(channelSolidity)
+          .withInterceptors(MetadataUtils.newAttachHeadersInterceptor(header))
+          .withDeadlineAfter(timeoutMs, TimeUnit.MILLISECONDS);;
+
+      keyPair = new KeyPair(hexPrivateKey);
+    }
+
     public ApiWrapper(String grpcEndpoint, String grpcEndpointSolidity, String hexPrivateKey, List<ClientInterceptor> clientInterceptors) {
         channel = ManagedChannelBuilder.forTarget(grpcEndpoint)
             .intercept(clientInterceptors)
@@ -207,6 +227,10 @@ public class ApiWrapper {
         return new ApiWrapper(Constant.TRONGRID_MAIN_NET, Constant.TRONGRID_MAIN_NET_SOLIDITY, hexPrivateKey, apiKey);
     }
 
+    public static ApiWrapper ofMainnet(String hexPrivateKey, String apiKey, int timeoutMs) {
+        return new ApiWrapper(Constant.TRONGRID_MAIN_NET, Constant.TRONGRID_MAIN_NET_SOLIDITY, hexPrivateKey, apiKey, timeoutMs);
+    }
+
     /**
      * The constructor for main net.
      * @deprecated 
@@ -229,6 +253,10 @@ public class ApiWrapper {
      */
     public static ApiWrapper ofShasta(String hexPrivateKey) {
         return new ApiWrapper(Constant.TRONGRID_SHASTA, Constant.TRONGRID_SHASTA_SOLIDITY, hexPrivateKey);
+    }
+
+    public static ApiWrapper ofShasta(String hexPrivateKey, int timeoutMs) {
+        return new ApiWrapper(Constant.TRONGRID_SHASTA, Constant.TRONGRID_SHASTA_SOLIDITY, hexPrivateKey, timeoutMs);
     }
 
     /**
